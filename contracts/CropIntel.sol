@@ -1,95 +1,60 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.20;
 
-/**
- * @title CropIntel
- * @notice A basic marketplace for buying and selling crops.
- * @dev This contract allows sellers to list crops and buyers to purchase them.
- */
-contract CropIntel {
-    // ============ Data Structures ============
-    struct CropListing {
+contract ItemMarketplace {
+    
+    struct ItemListing {
         uint256 id;
         string name;
         string description;
-        uint256 price; // Price per unit in wei
-        uint256 quantity; // Total quantity available
+        uint256 price;
         address payable seller;
         bool isAvailable;
     }
 
-    // ============ State Variables ============
-    uint256 public nextListingId;
-    mapping(uint256 => CropListing) public listings;
-
-    // ============ Events ============
-    event CropListed(
+    uint256 public nextItemId;
+    mapping(uint256 => ItemListing) public items;
+    event ItemListed(
         uint256 indexed id,
         address indexed seller,
         string name,
-        uint256 price,
-        uint256 quantity
+        uint256 price
     );
 
-    event CropPurchased(
+    event ItemPurchased(
         uint256 indexed id,
         address indexed buyer,
-        uint256 quantity,
-        uint256 totalCost
+        uint256 price
     );
 
-    // ============ Errors ============
-    error ListingNotFound();
-    error NotEnoughQuantity();
+    error ItemNotFound();
     error IncorrectPayment();
-    error ListingNotAvailable();
+    error ItemNotAvailable();
 
-    // ============ Functions ============
-
-    /**
-     * @notice Allows a seller to list a crop for sale.
-     * @param _name The name of the crop.
-     * @param _description A description of the crop.
-     * @param _price The price per unit in wei.
-     * @param _quantity The total quantity available for sale.
-     */
-    function listCrop(string memory _name, string memory _description, uint256 _price, uint256 _quantity) external {
+    function listItem(string memory _name, string memory _description, uint256 _price) external {
         require(_price > 0, "Price must be greater than zero");
-        require(_quantity > 0, "Quantity must be greater than zero");
 
-        uint256 listingId = nextListingId;
-        listings[listingId] = CropListing(listingId, _name, _description, _price, _quantity, payable(msg.sender), true);
+        uint256 itemId = nextItemId;
+        items[itemId] = ItemListing(itemId, _name, _description, _price, payable(msg.sender), true);
 
-        emit CropListed(listingId, msg.sender, _name, _price, _quantity);
-        nextListingId++;
+        emit ItemListed(itemId, msg.sender, _name, _price);
+        nextItemId++;
     }
 
-    /**
-     * @notice Allows a buyer to purchase a specific quantity of a listed crop.
-     * @param _listingId The ID of the crop listing to purchase from.
-     * @param _quantityToBuy The quantity of the crop to buy.
-     */
-    function buyCrop(uint256 _listingId, uint256 _quantityToBuy) external payable {
-        if (_listingId >= nextListingId) revert ListingNotFound();
+    function buyItem(uint256 _itemId) external payable {
+        if (_itemId >= nextItemId) revert ItemNotFound();
 
-        CropListing storage listing = listings[_listingId];
+        ItemListing storage item = items[_itemId];
 
-        if (!listing.isAvailable) revert ListingNotAvailable();
-        if (_quantityToBuy > listing.quantity) revert NotEnoughQuantity();
+        if (!item.isAvailable) revert ItemNotAvailable();
 
-        uint256 totalCost = listing.price * _quantityToBuy;
-        if (msg.value != totalCost) revert IncorrectPayment();
+        if (msg.value != item.price) revert IncorrectPayment();
 
-        // Update state
-        listing.quantity -= _quantityToBuy;
-        if (listing.quantity == 0) {
-            listing.isAvailable = false;
-        }
+        item.isAvailable = false;
 
-        // Transfer funds to the seller
-        (bool success, ) = listing.seller.call{value: totalCost}("");
+        (bool success, ) = item.seller.call{value: item.price}("");
         require(success, "Transfer failed");
 
-        emit CropPurchased(_listingId, msg.sender, _quantityToBuy, totalCost);
+        emit ItemPurchased(_itemId, msg.sender, item.price);
     }
 }

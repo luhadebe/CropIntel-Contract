@@ -2,9 +2,9 @@ const hre = require("hardhat");
 
 async function main() {
 
-  const Factory = await hre.ethers.deployContract("FullSchoolSystem", ["weThinkCode"]);
+  const Factory = await hre.ethers.deployContract("CropIntel",);
   await Factory.waitForDeployment();
-  console.log(`FullSchoolSystem deployed to ${Factory.target}`);
+  console.log(`CropIntel deployed to ${Factory.target}`);
   
   // Deploy TestTarget contract (contract that has variable `x`)
   const TestTarget = await hre.ethers.deployContract("TestTarget");
